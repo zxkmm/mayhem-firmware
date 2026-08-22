@@ -92,6 +92,36 @@ void IO::lcd_backlight(const bool value) {
     io_write(1, io_reg);
 }
 
+void IO::lcd_backlight_isr(const bool value) {
+    /* Save the current state of the shared PortaPack bus, strobe the IO
+     * register with the updated backlight bit, then restore. Mirrors the
+     * discipline of io_update() so interrupting an in-progress LCD
+     * transaction leaves it intact. NB: Must run at an IRQ priority that
+     * does not nest with io_update()'s caller (GPT TIMER0, priority 2). */
+    const auto save_data = data_read();
+    const auto saved_addr = gpio_addr.read();
+    const auto dir = gpio_dir.read();
+
+    io_reg = (io_reg & 0x7f) | ((value ? 1 : 0) << 7);
+    data_write_low(io_reg);
+    dir_write();
+    addr(1);
+    __asm__("nop");
+    __asm__("nop");
+    __asm__("nop");
+    io_stb_assert();
+    __asm__("nop");
+    __asm__("nop");
+    __asm__("nop");
+    io_stb_deassert();
+
+    data_write_low(save_data);
+    if (dir) { /* 0 (write) -> 1 (read) */
+        dir_read();
+    }
+    gpio_addr.write(saved_addr);
+}
+
 void IO::lcd_reset_state(const bool active) {
     io_reg = (io_reg & 0xfe) | ((active ? 1 : 0) << 0);
     io_write(1, io_reg);

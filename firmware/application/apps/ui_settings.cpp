@@ -362,6 +362,7 @@ SetUIView::SetUIView(NavigationView& nav) {
                   &toggle_bias_tee,
                   &toggle_clock,
                   &toggle_mute,
+                  &toggle_fake_brightness,
                   &toggle_sd_card,
                   &button_save,
                   &button_cancel});
@@ -398,6 +399,7 @@ SetUIView::SetUIView(NavigationView& nav) {
     toggle_clock.set_value(!pmem::ui_hide_clock());
     toggle_speaker.set_value(!pmem::ui_hide_speaker());
     toggle_mute.set_value(!pmem::ui_hide_mute());
+    toggle_fake_brightness.set_value(!pmem::ui_hide_fake_brightness());
     toggle_battery_icon.set_value(!pmem::ui_hide_battery_icon());
     toggle_battery_text.set_value(!pmem::ui_hide_numeric_battery());
     toggle_sd_card.set_value(!pmem::ui_hide_sd_card());
@@ -425,6 +427,7 @@ SetUIView::SetUIView(NavigationView& nav) {
         pmem::set_ui_hide_clock(!toggle_clock.value());
         pmem::set_ui_hide_speaker(!toggle_speaker.value());
         pmem::set_ui_hide_mute(!toggle_mute.value());
+        pmem::set_ui_hide_fake_brightness(!toggle_fake_brightness.value());
         pmem::set_ui_hide_battery_icon(!toggle_battery_icon.value());
         pmem::set_ui_hide_numeric_battery(!toggle_battery_text.value());
         pmem::set_ui_hide_sd_card(!toggle_sd_card.value());
@@ -918,6 +921,8 @@ void SetConfigModeView::focus() {
 
 SetDisplayView::SetDisplayView(NavigationView& nav) {
     add_children({&labels,
+                  &field_fake_brightness,
+                  &checkbox_brightness_switch,
                   &button_save,
                   &button_cancel});
 
@@ -925,9 +930,17 @@ SetDisplayView::SetDisplayView(NavigationView& nav) {
         add_child(&checkbox_ips_screen_switch);
     }
 
+    field_fake_brightness.set_by_value(pmem::apply_fake_brightness()
+                                           ? pmem::fake_brightness_level()
+                                           : pmem::BRIGHTNESS_OFF);
+    checkbox_brightness_switch.set_value(pmem::apply_fake_brightness());
     checkbox_ips_screen_switch.set_value(pmem::config_lcd_normally_black());
 
     button_save.on_select = [&nav, this](Button&) {
+        pmem::set_apply_fake_brightness(checkbox_brightness_switch.value());
+        pmem::set_fake_brightness_level(field_fake_brightness.selected_index_value());
+        portapack::apply_fake_brightness_setting();
+
         if (checkbox_ips_screen_switch.value() != pmem::config_lcd_normally_black()) {
             pmem::set_lcd_normally_black(checkbox_ips_screen_switch.value());
         }

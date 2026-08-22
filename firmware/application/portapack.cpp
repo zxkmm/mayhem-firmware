@@ -80,7 +80,7 @@ portapack::IO io{
 };
 
 portapack::BacklightCAT4004 backlight_cat4004;
-portapack::BacklightOnOff backlight_on_off;
+portapack::BacklightOnOffPWM backlight_on_off_pwm;
 
 lcd::ILI9341 display;
 
@@ -279,7 +279,14 @@ static const portapack::cpld::Config& portapack_cpld_config() {
 Backlight* backlight() {
     return (portapack_model() == PortaPackModel::R2_20170522)
                ? static_cast<portapack::Backlight*>(&backlight_cat4004)  // R2_20170522
-               : static_cast<portapack::Backlight*>(&backlight_on_off);  // R1_20150901
+               : static_cast<portapack::Backlight*>(&backlight_on_off_pwm);  // R1_20150901
+}
+
+void apply_fake_brightness_setting() {
+    backlight()->set_fake_brightness(
+        portapack::persistent_memory::apply_fake_brightness()
+            ? portapack::persistent_memory::fake_brightness_level()
+            : 0);
 }
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -505,6 +512,7 @@ static void initialize_boot_splash_screen() {
 
     chThdSleepMilliseconds(17);
     portapack::backlight()->on();
+    apply_fake_brightness_setting();
 
     painter.draw_bitmap(
         {portapack::display.width() / 2 - 40, portapack::display.height() / 2 - 8},
@@ -698,6 +706,7 @@ init_status_t init() {
     else {
         portapack::display.init();
         portapack::backlight()->on();
+        apply_fake_brightness_setting();
     }
 
     return return_code;

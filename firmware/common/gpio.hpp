@@ -250,16 +250,24 @@ struct GPIO {
     }
 
     // Physical Level Operations
+    //
+    // NB: these MUST be always_inline. They are one store instruction, but at -Os
+    // GCC prefers a 4-byte "bl" over the inline body and emits them out of line -
+    // and then the pin/port/polarity fields get re-loaded from the object at run
+    // time instead of being constant folded away. The M0 runs XIP from SPIFI with
+    // no cache, so every one of those calls (and every field load) is a fresh
+    // command+address sequence on the QSPI bus. In the LCD pixel loops these run
+    // twice per pixel, which is enough to slow painting down by ~10x.
 
-    void set() const {
+    void set() const __attribute__((always_inline)) {
         palSetPad(_gpio_port, _gpio_pad);
     }
 
-    void clear() const {
+    void clear() const __attribute__((always_inline)) {
         palClearPad(_gpio_port, _gpio_pad);
     }
 
-    void toggle() const {
+    void toggle() const __attribute__((always_inline)) {
         palTogglePad(_gpio_port, _gpio_pad);
     }
 
@@ -271,16 +279,16 @@ struct GPIO {
         palSetPadMode(_gpio_port, _gpio_pad, PAL_MODE_INPUT);
     }
 
-    void write(const bool value) const {
+    void write(const bool value) const __attribute__((always_inline)) {
         palWritePad(_gpio_port, _gpio_pad, value);
     }
 
-    bool read() const {
+    bool read() const __attribute__((always_inline)) {
         return palReadPad(_gpio_port, _gpio_pad);
     }
 
     // Turns the feature ON based on its polarity
-    void setActive() const {
+    void setActive() const __attribute__((always_inline)) {
         if (_polarity == Polarity::ActiveHigh) {
             set();
         } else {
@@ -289,7 +297,7 @@ struct GPIO {
     }
 
     // Turns the feature OFF based on its polarity
-    void setInactive() const {
+    void setInactive() const __attribute__((always_inline)) {
         if (_polarity == Polarity::ActiveHigh) {
             clear();
         } else {
@@ -298,7 +306,7 @@ struct GPIO {
     }
 
     // Sets the logical state of the feature
-    void setState(const bool active) const {
+    void setState(const bool active) const __attribute__((always_inline)) {
         if (active) {
             setActive();
         } else {

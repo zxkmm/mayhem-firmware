@@ -404,8 +404,12 @@ class SetUIView : public View {
         {19 * 8, 12 * 16 + 2, 16, 16},
         &bitmap_icon_batt_text};
 
-    ImageToggle toggle_sd_card{
+    ImageToggle toggle_fake_brightness{
         {21 * 8, 12 * 16 + 2, 16, 16},
+        &bitmap_icon_brightness};
+
+    ImageToggle toggle_sd_card{
+        {23 * 8, 12 * 16 + 2, 16, 16},
         &bitmap_sd_card_ok};
 
     Button button_save{
@@ -808,6 +812,8 @@ class SetConfigModeView : public View {
     };
 };
 
+using portapack::persistent_memory::fake_brightness_level_options;
+
 class SetDisplayView : public View {
    public:
     SetDisplayView(NavigationView& nav);
@@ -818,8 +824,23 @@ class SetDisplayView : public View {
 
    private:
     Labels labels{
+        {{1 * 8, 1 * 16}, "Screen brightness (PWM).", Theme::getInstance()->fg_light->foreground},
+        {{2 * 8, 8 * 16}, "Brightness:", Theme::getInstance()->fg_light->foreground},
         {{2 * 8, 10 * 16}, "REBOOT TO APPLY SCREEN TYPE", Theme::getInstance()->fg_light->foreground},
     };
+
+    OptionsField field_fake_brightness{
+        {14 * 8, 8 * 16},
+        6,
+        {{"100%", fake_brightness_level_options::BRIGHTNESS_OFF},
+         {"50%", fake_brightness_level_options::BRIGHTNESS_50},
+         {"25%", fake_brightness_level_options::BRIGHTNESS_25},
+         {"12.5%", fake_brightness_level_options::BRIGHTNESS_12p5}}};
+
+    Checkbox checkbox_brightness_switch{
+        {1 * 8, 5 * 16},
+        16,
+        "Enable brightness adjust"};
 
     Checkbox checkbox_ips_screen_switch{
         {1 * 8, 12 * 16},

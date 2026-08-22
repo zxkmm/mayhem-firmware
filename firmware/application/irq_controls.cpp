@@ -22,6 +22,7 @@
 
 #include "irq_controls.hpp"
 
+#include "backlight.hpp"
 #include "ch.h"
 #include "debounce.hpp"
 #include "encoder.hpp"
@@ -193,6 +194,9 @@ void timer0_callback(GPTDriver* const) {
 
     if (encoder_update(switches_raw) || encoder_read())
         event_mask |= EVT_MASK_ENCODER;
+
+    // Backlight PWM phase tick (no-op unless dimming is active).
+    backlight_pwm_tick();
 
         /* Signal event loop */
 #ifdef PRALINE

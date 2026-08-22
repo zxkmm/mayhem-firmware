@@ -107,6 +107,10 @@ class IO {
     void init();
 
     void lcd_backlight(const bool value);
+    /* ISR-safe backlight write: updates the IO register backlight bit using
+     * the same save/strobe/restore bus discipline as io_update(), so it can
+     * not corrupt an LCD transaction that may be in progress. */
+    void lcd_backlight_isr(const bool value);
     void lcd_reset_state(const bool active);
     void audio_reset_state(const bool active);
     void reference_oscillator(const bool enable);
@@ -258,11 +262,14 @@ class IO {
         gpio_lcd_rdx.set();
     }
 
-    void lcd_wr_assert() {
+    /* NB: always_inline - these two run twice per pixel from lcd_write_data().
+     * Left to its own devices, -Os emits them out of line and the pixel loops end
+     * up doing a "bl" per WR edge across ~450KB of XIP flash. See GPIO::set(). */
+    void lcd_wr_assert() __attribute__((always_inline)) {
         gpio_control::lcd_wrx.setInactive();
     }
 
-    void lcd_wr_deassert() {
+    void lcd_wr_deassert() __attribute__((always_inline)) {
         gpio_control::lcd_wrx.setActive();
     }
 

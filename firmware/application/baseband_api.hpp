@@ -101,6 +101,15 @@ void set_spectrum(
     const size_t sampling_rate,
     const size_t trigger);
 void set_audio_ddc_frequency(int32_t frequency);
+void set_spec_analyzer(
+    const uint32_t sampling_rate,
+    const uint8_t fft_size_log2,
+    const uint8_t out_ratio,
+    const uint8_t averages,
+    const spec_analyzer::Window window,
+    const spec_analyzer::Detector detector,
+    const uint8_t settle_blocks);
+void request_spec_analyzer_frame(const uint32_t seq);
 void set_time_sink(
     const size_t sampling_rate,
     const size_t trigger);

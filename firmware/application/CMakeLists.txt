@@ -307,14 +307,17 @@ set(CPPSRC
 	apps/ui_search.cpp
 	apps/ui_settings.cpp
 	apps/ui_sonde.cpp
+	apps/ui_spectrum_analyzer.cpp
 	apps/ui_ss_viewer.cpp
 	apps/ui_standalone_view.cpp
-	apps/ui_subghzd.cpp
+# TEMPORARILY DISABLED to free internal flash for the Spectrum app:
+#	apps/ui_subghzd.cpp
 	# apps/ui_test.cpp
 	apps/ui_text_editor.cpp
 	apps/ui_touch_calibration.cpp
 	apps/ui_touchtunes.cpp
-	apps/ui_weatherstation.cpp
+# TEMPORARILY DISABLED to free internal flash for the Spectrum app:
+#	apps/ui_weatherstation.cpp
 	protocols/aprs.cpp
 	protocols/ax25.cpp
 	protocols/dcs.cpp

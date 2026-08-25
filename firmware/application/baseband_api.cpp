@@ -344,6 +344,24 @@ void set_audio_ddc_frequency(int32_t frequency) {
     send_message(&message);
 }
 
+void set_spec_analyzer(
+    const uint32_t sampling_rate,
+    const uint8_t fft_size_log2,
+    const uint8_t out_ratio,
+    const uint8_t averages,
+    const spec_analyzer::Window window,
+    const spec_analyzer::Detector detector,
+    const uint8_t settle_blocks) {
+    const SpecAnalyzerConfigMessage message{
+        sampling_rate, fft_size_log2, out_ratio, averages, window, detector, settle_blocks};
+    send_message(&message);
+}
+
+void request_spec_analyzer_frame(const uint32_t seq) {
+    const SpecAnalyzerRequestMessage message{seq};
+    send_message(&message);
+}
+
 void set_time_sink(
     const size_t sampling_rate,
     const size_t trigger) {

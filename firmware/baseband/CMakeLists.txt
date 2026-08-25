@@ -479,6 +479,14 @@ set(MODE_CPPSRC
 DeclareTargets(PSPE wideband_spectrum)
 
 
+### Spectrum Analyzer
+
+set(MODE_CPPSRC
+	proc_spectrum_analyzer.cpp
+)
+DeclareTargets(PSAN spectrum_analyzer)
+
+
 ### WFM Audio
 
 set(MODE_CPPSRC
@@ -488,17 +496,19 @@ DeclareTargets(PWFM wfm_audio)
 
 ### SubGhz Decoders
 
-set(MODE_CPPSRC
-	proc_subghzd.cpp
-)
-DeclareTargets(PSGD subghzd)
+# TEMPORARILY DISABLED to free internal flash for the Spectrum app:
+#set(MODE_CPPSRC
+#	proc_subghzd.cpp
+#)
+#DeclareTargets(PSGD subghzd)
 
 
 ### Weather Stations
-set(MODE_CPPSRC
-	proc_weather.cpp
-)
-DeclareTargets(PWTH weather)
+# TEMPORARILY DISABLED to free internal flash for the Spectrum app:
+#set(MODE_CPPSRC
+#	proc_weather.cpp
+#)
+#DeclareTargets(PWTH weather)
 
 set(MODE_FLAGS "-Os")
 

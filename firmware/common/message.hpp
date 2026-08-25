@@ -171,6 +171,9 @@ class Message {
         TetraBsch = 113,
         TetraDnb = 114,
         AudioDDCConfig = 115,
+        SpecAnalyzerConfig = 116,
+        SpecAnalyzerRequest = 117,
+        SpecAnalyzerFrame = 118,
         MAX
     };
 
@@ -2065,4 +2068,106 @@ struct TetraDnbMessage : public Message {
     // 432 TCH type-5 bits: 216 bits before the training sequence + 216 bits after.
     std::array<uint8_t, 54> payload;
 };
+
+/* Spectrum analyzer (swept FFT) M0 <-> M4 protocol.
+ *
+ * The M0 owns the sweep: it retunes the radio, then asks the M4 for exactly one
+ * measurement per tuning step (request/response). That keeps the two cores in
+ * lock step without a free-running FIFO, so no frame can ever be attributed to
+ * the wrong LO frequency, and there is no 60 Hz display-sync bottleneck: the
+ * response message itself wakes the M0 event loop as soon as the FFT is done. */
+namespace spec_analyzer {
+
+/* Number of bins reported per measurement.
+ *
+ * Reported bins sit entirely in the UPPER sideband: bin j covers FFT bins
+ * [N/2 + j*ratio, N/2 + (j+1)*ratio), i.e. baseband offsets
+ * [j*ratio*fs/N, (j+1)*ratio*fs/N) above the LO. Nothing below the LO is ever
+ * reported.
+ *
+ * That is deliberate. A zero-IF front end always has DC offset and LO
+ * feedthrough sitting exactly at the tuned frequency; if the reported band were
+ * centred on the LO, every slice would carry a spike in its middle, and a
+ * single-slice span would put that spike exactly on the frequency the user
+ * tuned to. Keeping the LO below the reported band (the app leaves a guard of
+ * a few bins) moves the artefact off the display entirely. */
+constexpr size_t bin_count = 256;
+
+/* Reported bins are dBFS mapped to uint8: value = (dBFS - db_offset) * db_per_lsb_inv.
+ * Covers -120.0 .. +7.5 dBFS in 0.5 dB steps. */
+constexpr float db_offset = -120.0f;
+constexpr float db_per_lsb = 0.5f;
+
+enum class Window : uint8_t {
+    None = 0,
+    Hamming = 1,
+    Blackman = 2,
+    /* Wide main lobe (3.77 bins of ENBW) but only 0.08 dB of scalloping loss,
+     * against 1.8 dB for Hamming. This is the one to use when the level of a
+     * carrier matters more than resolving what is next to it. */
+    FlatTop = 3,
+};
+
+enum class Detector : uint8_t {
+    Peak = 0,
+    Average = 1,
+    Sample = 2,
+    NegPeak = 3,
+};
+
+}  // namespace spec_analyzer
+
+class SpecAnalyzerConfigMessage : public Message {
+   public:
+    constexpr SpecAnalyzerConfigMessage(
+        uint32_t sampling_rate,
+        uint8_t fft_size_log2,
+        uint8_t out_ratio,
+        uint8_t averages,
+        spec_analyzer::Window window,
+        spec_analyzer::Detector detector,
+        uint8_t settle_blocks)
+        : Message{ID::SpecAnalyzerConfig},
+          sampling_rate{sampling_rate},
+          fft_size_log2{fft_size_log2},
+          out_ratio{out_ratio},
+          averages{averages},
+          window{window},
+          detector{detector},
+          settle_blocks{settle_blocks} {
+    }
+
+    uint32_t sampling_rate;
+    uint8_t fft_size_log2;  // 9..10 (512..1024 point FFT)
+    /* FFT bins per reported bin, combined with the detector. Must satisfy
+     * bin_count * out_ratio <= N/2, since only the upper sideband is reported. */
+    uint8_t out_ratio;
+    uint8_t averages;  // power-domain averages per measurement (video filter)
+    spec_analyzer::Window window;
+    spec_analyzer::Detector detector;
+    uint8_t settle_blocks;  // DMA buffers discarded after a retune before capturing
+};
+
+/* M0 -> M4: capture one measurement and reply with a SpecAnalyzerFrameMessage. */
+class SpecAnalyzerRequestMessage : public Message {
+   public:
+    constexpr SpecAnalyzerRequestMessage(uint32_t seq)
+        : Message{ID::SpecAnalyzerRequest},
+          seq{seq} {
+    }
+
+    uint32_t seq;
+};
+
+/* M4 -> M0: the measurement, carrying its own data (no shared FIFO needed). */
+class SpecAnalyzerFrameMessage : public Message {
+   public:
+    SpecAnalyzerFrameMessage()
+        : Message{ID::SpecAnalyzerFrame} {
+    }
+
+    uint32_t seq{0};
+    std::array<uint8_t, spec_analyzer::bin_count> db{};
+};
+
 #endif /*__MESSAGE_H__*/

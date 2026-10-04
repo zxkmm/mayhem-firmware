@@ -1083,7 +1083,9 @@ SystemView::SystemView(
     add_child(&notification_view);
 
     if (pmem::config_splash()) {
-        navigation_view.push<SplashScreenView>();
+        std::filesystem::path splash_path{};
+        if (SplashScreenView::find_splash_file(splash_path))
+            navigation_view.push<SplashScreenView>(splash_path);
     }
     status_view.set_back_enabled(false);
     status_view.set_title_image_enabled(true);
@@ -1164,8 +1166,8 @@ void SplashScreenView::focus() {
     button_done.focus();
 }
 
-SplashScreenView::SplashScreenView(NavigationView& nav)
-    : nav_(nav) {
+SplashScreenView::SplashScreenView(NavigationView& nav, const std::filesystem::path& path)
+    : nav_(nav), path_(path) {
     add_children({
         &button_done,
         // &bmp_view
@@ -1175,7 +1177,13 @@ SplashScreenView::SplashScreenView(NavigationView& nav)
     };
 }
 
-void SplashScreenView::get_random_splash_file(std::filesystem::path& path) {
+// only custom splash images are shown: /splash.bmp, else a random BMP from /SPLASH; no image = no splash
+bool SplashScreenView::find_splash_file(std::filesystem::path& path) {
+    if (file_exists(splash_dot_bmp)) {
+        path = splash_dot_bmp;
+        return true;
+    }
+
     path = u"";
 
     srand(LPC_RTC->CTIME0);
@@ -1208,24 +1216,14 @@ void SplashScreenView::get_random_splash_file(std::filesystem::path& path) {
         }
         f_closedir(&dir);
     }
+    return !path.empty();
 }
 
 void SplashScreenView::paint(Painter&) {
     set_clean();
-    // if (!bmp_view.load_bmp(splash_dot_bmp)) { //--too slow drawing, bc of the more bmp format support, and up-> down drawing
-    if (portapack::display.draw_bmp_from_sdcard_file({0, 0}, splash_dot_bmp)) return;
-    // ^ try draw bmp file from sdcard at (0,0), and the (0,0) already bypassed the status bar, so actual pos is (0, STATUS_BAR_HEIGHT)
-
-    std::filesystem::path path{};
-    get_random_splash_file(path);
-    if (portapack::display.draw_bmp_from_sdcard_file({0, 0}, path)) return;
-    portapack::display.draw_bitmap({screen_width / 2 - ((bitmap_titlebar_image.size.width() * 3) / 2),
-                                    screen_height / 2},
-                                   bitmap_titlebar_image.size,
-                                   bitmap_titlebar_image.data,
-                                   Theme::getInstance()->bg_darkest->foreground,
-                                   Theme::getInstance()->bg_darkest->background, 3);
-    // ^ draw BMP HEX arr in firmware, note that the BMP HEX arr only cover the image part (instead of fill the screen with background, this position is located it in the center)
+    // if (!bmp_view.load_bmp(path_)) { //--too slow drawing, bc of the more bmp format support, and up-> down drawing
+    portapack::display.draw_bmp_from_sdcard_file({0, 0}, path_);
+    // ^ draw bmp file from sdcard at (0,0), and the (0,0) already bypassed the status bar, so actual pos is (0, STATUS_BAR_HEIGHT)
 }
 
 bool SplashScreenView::on_touch(const TouchEvent event) {

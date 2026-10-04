@@ -381,19 +381,21 @@ class InformationView : public View {
 
 class SplashScreenView : public View {
    public:
-    SplashScreenView(NavigationView& nav);
+    SplashScreenView(NavigationView& nav, const std::filesystem::path& path);
     void paint(Painter&) override;
     void focus() override;
 
     bool on_touch(const TouchEvent event) override;
     void handle_pop();
 
+    static bool find_splash_file(std::filesystem::path& path);
+
    private:
     NavigationView& nav_;
+    std::filesystem::path path_;
     Button button_done{
         {screen_width, 0, 1, 1},
         ""};
-    void get_random_splash_file(std::filesystem::path& path);
 };
 
 class ReceiversMenuView : public BtnGridView {
